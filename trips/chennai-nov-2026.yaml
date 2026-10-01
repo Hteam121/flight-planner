@@ -1,0 +1,38 @@
+name: chennai-nov-2026
+origin: [DFW]
+destination: [MAA]
+search_window:
+  earliest_depart: 2026-11-06
+  latest_return: 2026-12-20
+trip_length: { min_nights: 10, max_nights: 18 }
+pto_budget: 10
+work_calendar:
+  weekends_off: true
+  holidays: [2026-11-25, 2026-11-26]
+travel_day_rules:
+  evening_departure_free: true
+  evening_departure_hour: 17
+  return_arrival_costs_pto: true
+passengers: 1
+seat: economy
+currency: USD
+comfort_lambda: 60          # $ you'd pay to remove one "comfort point" (≈ one extra stop)
+verify_top_n: 30
+verify_long_trip_fraction: 0.85   # always verify trips >= 85% of max nights (16+)
+airline_tiers:               # 1 = best, 3 = avoid. Unlisted = neutral-ish (0.6)
+  QR: 1
+  EK: 1
+  EY: 1
+  SQ: 1
+  CX: 1
+  BA: 2
+  AA: 2
+  LH: 2
+  AF: 2
+  KL: 2
+  TK: 2
+  UA: 2
+  DL: 2
+  AI: 3
+  ET: 3
+  "6E": 3

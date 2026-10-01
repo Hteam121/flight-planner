@@ -1,0 +1,20 @@
+# {{ cfg.origin|join('/') }} → {{ cfg.destination|join('/') }}: {{ cfg.name }}
+
+{{ n_pairs }} feasible date pairs under {{ cfg.pto_budget }} PTO days · {{ n_verified }} verified on Google Flights · generated {{ generated }}
+
+## Top picks
+{% for label, it in [("Cheapest", profiles.cheapest), ("Balanced", profiles.balanced), ("Comfort", profiles.comfort), ("Longest trip", profiles.longest_trip)] if it %}
+- **{{ label }}** — {{ it.price|money }}{% if cfg.group_size > 1 %} pp ({{ (it.price*cfg.group_size)|money }} group){% endif %} · {{ it.depart_date|dow }} → {{ it.return_date|dow }} · {{ it.nights }} nights / {{ it.pto_cost }} PTO · {{ it.airlines|join(' + ') }} · {{ it.stops }} stops{% if it.layover_airports %} via {{ it.layover_airports|join(', ') }}{% endif %} · {{ it.total_duration_min|hm }} · [Google Flights]({{ it.deep_link }})
+{% endfor %}
+
+## Pareto frontier (price vs comfort)
+| Depart | Return | Nights | PTO | Price | Airline(s) | Stops | Duration | Comfort |
+|---|---|---|---|---|---|---|---|---|
+{% for it in frontier %}| {{ it.depart_date|dow }} | {{ it.return_date|dow }} | {{ it.nights }} | {{ it.pto_cost }} | {{ it.price|money }} | {{ it.airlines|join(' + ') }} | {{ it.stops }} | {{ it.total_duration_min|hm }} | {{ it.comfort_penalty }} |
+{% endfor %}
+
+## All verified date pairs (best option each, by value score)
+| Depart | Return | Nights | PTO | Price | Airline(s) | Stops | Via | Duration | Value |
+|---|---|---|---|---|---|---|---|---|---|
+{% for it in table %}| {{ it.depart_date|dow }} | {{ it.return_date|dow }} | {{ it.nights }} | {{ it.pto_cost }} | {{ it.price|money }} | {{ it.airlines|join(' + ') }} | {{ it.stops }} | {{ it.layover_airports|join(', ') }} | {{ it.total_duration_min|hm }} | {{ it.value_score|money }} |
+{% endfor %}

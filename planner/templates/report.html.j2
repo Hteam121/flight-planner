@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ cfg.name }} flights</title>
+<style>
+:root{--bg:#0f1115;--card:#171a21;--fg:#e7e9ee;--muted:#8b93a7;--accent:#5eead4;--line:#262b36}
+@media (prefers-color-scheme: light){:root{--bg:#f6f7f9;--card:#fff;--fg:#14161b;--muted:#5d6472;--accent:#0f766e;--line:#e3e6ec}}
+body{margin:0;padding:24px 16px;background:var(--bg);color:var(--fg);font:15px/1.45 -apple-system,Inter,system-ui,sans-serif}
+main{max-width:1100px;margin:0 auto}h1{margin:0 0 4px;font-size:26px}h2{font-size:18px;margin:32px 0 10px}
+.sub{color:var(--muted);margin-bottom:20px}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}.card .k{color:var(--accent);font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.card .p{font-size:28px;font-weight:700;margin:6px 0 2px}.card .m{color:var(--muted);font-size:13px}.card a{color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}th{cursor:pointer;user-select:none;color:var(--muted);font-weight:600}
+tr.pareto td:first-child::before{content:"★ ";color:var(--accent)}tr.over td{opacity:.45}
+.months{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.month{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}.month h3{margin:0 0 8px;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.dh{font-size:10px;color:var(--muted);text-align:center}
+.cell{min-height:44px;border-radius:6px;padding:3px 4px;font-size:11px;border:1px solid var(--line);position:relative}
+.cell.off{background-image:repeating-linear-gradient(135deg,transparent 0 6px,rgba(128,128,128,.12) 6px 8px)}
+.cell .d{color:var(--muted)}.cell .pr{font-weight:700;display:block}.cell.nf{opacity:.35}.cell a{color:inherit;text-decoration:none}
+.legend{color:var(--muted);font-size:12px;margin-top:8px}code{background:var(--line);padding:1px 5px;border-radius:4px}
+</style></head><body><main>
+<h1>{{ cfg.origin|join('/') }} → {{ cfg.destination|join('/') }}: {{ cfg.name }}</h1>
+<div class="sub">{{ n_pairs }} feasible date pairs under {{ cfg.pto_budget }} PTO days · {{ n_verified }} verified on Google Flights ({{ n_its }} itineraries) · generated {{ generated }}{% if cfg.group_size > 1 %} · prices ×{{ cfg.group_size }} travelers shown in cards{% endif %}</div>
+
+<h2>Top picks</h2>
+<div class="cards">
+{% for label, it, why in [("Cheapest", profiles.cheapest, "lowest fare"), ("Balanced", profiles.balanced, "price + " ~ cfg.comfort_lambda|int ~ "$/comfort pt"), ("Comfort", profiles.comfort, "fewest stops, shortest"), ("Longest trip", profiles.longest_trip, "max nights, cheapest")] %}
+{% if it %}
+<div class="card"><div class="k">{{ label }} <span style="color:var(--muted);font-weight:400">· {{ why }}</span></div>
+<div class="p">{{ (it.price * cfg.group_size)|money }}{% if cfg.group_size > 1 %} <span class="m">({{ it.price|money }} pp)</span>{% endif %}</div>
+<div><b>{{ it.depart_date|dow }} → {{ it.return_date|dow }}</b> · {{ it.nights }} nights · {{ it.pto_cost }} PTO</div>
+<div class="m">{{ it.airlines|join(' + ') }} · {{ it.stops }} stop{{ '' if it.stops == 1 else 's' }}{% if it.layover_airports %} via {{ it.layover_airports|join(', ') }}{% endif %} · {{ it.total_duration_min|hm }}</div>
+<div class="m">Departs {{ it.depart_dt.strftime('%H:%M') }}{% if it.overnight_layover %} · overnight layover{% endif %} · comfort penalty {{ it.comfort_penalty }}</div>
+<div class="m"><a href="{{ it.deep_link }}" target="_blank">Open on Google Flights ↗</a></div></div>
+{% endif %}{% endfor %}
+</div>
+
+<h2>All verified options <span class="legend">(best itinerary per date pair · ★ = Pareto-optimal on price vs comfort · click headers to sort)</span></h2>
+<table id="t"><thead><tr><th>Depart</th><th>Return</th><th>Nights</th><th>PTO</th><th>Price</th><th>Airline(s)</th><th>Stops</th><th>Via</th><th>Duration</th><th>Dep time</th><th>Comfort</th><th>Value</th><th></th></tr></thead><tbody>
+{% for it in table %}<tr class="{{ 'pareto' if it.pareto }} {{ 'over' if it.pto_cost > cfg.pto_budget }}">
+<td data-v="{{ it.depart_date }}">{{ it.depart_date|dow }}</td><td data-v="{{ it.return_date }}">{{ it.return_date|dow }}</td><td>{{ it.nights }}</td><td>{{ it.pto_cost }}</td>
+<td data-v="{{ it.price }}">{{ it.price|money }}</td><td>{{ it.airlines|join(' + ') }}</td><td>{{ it.stops }}</td><td>{{ it.layover_airports|join(', ') }}</td>
+<td data-v="{{ it.total_duration_min }}">{{ it.total_duration_min|hm }}</td><td>{{ it.depart_dt.strftime('%H:%M') }}</td><td>{{ it.comfort_penalty }}</td><td data-v="{{ it.value_score }}">{{ it.value_score|money }}</td>
+<td><a href="{{ it.deep_link }}" target="_blank">open</a></td></tr>
+{% endfor %}</tbody></table>
+
+<h2>Departure-date heatmap <span class="legend">(cheapest verified fare for that departure day across all feasible returns · hatched = non-working day · faded = not feasible under PTO budget)</span></h2>
+<div class="months">
+{% for m in heatmap %}<div class="month"><h3>{{ m.label }}</h3><div class="grid">
+{% for d in ['Mo','Tu','We','Th','Fr','Sa','Su'] %}<div class="dh">{{ d }}</div>{% endfor %}
+{% for week in m.weeks %}{% for c in week %}
+<div class="cell {{ 'off' if c.off }} {{ 'nf' if c.in_month and not c.feasible }}" style="background-color:{{ c.color }}" title="{% if c.price %}{{ c.date }} → {{ c.ret }}: ${{ c.price }} {{ c.airline }}{% endif %}">
+<span class="d">{{ c.day }}</span>{% if c.price %}<span class="pr">${{ c.price }}</span>{% endif %}</div>
+{% endfor %}{% endfor %}</div></div>{% endfor %}
+</div>
+
+<h2>PTO efficiency <span class="legend">(for each PTO spend, the longest trip found and its cheapest fare)</span></h2>
+<table><thead><tr><th>PTO days</th><th>Nights</th><th>Dates</th><th>Price</th><th>Airline</th><th></th></tr></thead><tbody>
+{% for r in pto_table %}<tr><td>{{ r.pto }}</td><td>{{ r.nights }}</td><td>{{ r.depart|dow }} → {{ r.ret|dow }}</td><td>{{ r.price|money }}</td><td>{{ r.airline }}</td><td><a href="{{ r.link }}" target="_blank">open</a></td></tr>{% endfor %}
+</tbody></table>
+
+<h2>Data freshness</h2>
+<p class="legend">Sources: {{ sources|join(', ') }}. Itineraries fetched between {{ fetched_range[0] }} and {{ fetched_range[1] }}. Round-trip pages list outbound options with the round-trip fare; comfort is scored on the outbound legs. PTO assumes you are home on the return date; adjust <code>travel_day_rules</code> in the trip YAML if your return lands next day.</p>
+<script>
+document.querySelectorAll('#t th').forEach((th,i)=>th.addEventListener('click',()=>{const tb=th.closest('table').tBodies[0];const rows=[...tb.rows];const asc=th.dataset.asc!=='1';th.dataset.asc=asc?'1':'0';
+rows.sort((a,b)=>{const x=a.cells[i].dataset.v??a.cells[i].textContent,y=b.cells[i].dataset.v??b.cells[i].textContent;const nx=parseFloat(x),ny=parseFloat(y);const c=(!isNaN(nx)&&!isNaN(ny))?nx-ny:x.localeCompare(y);return asc?c:-c});rows.forEach(r=>tb.appendChild(r))}));
+</script></main></body></html>

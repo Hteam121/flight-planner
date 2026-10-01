@@ -1,0 +1,18 @@
+name: guatemala-2027
+origin: [DFW]
+destination: [GUA]
+search_window:
+  earliest_depart: 2027-01-02
+  latest_return: 2027-12-20
+trip_length: { min_nights: 5, max_nights: 7 }
+pto_budget: 5
+work_calendar:
+  weekends_off: true
+  holidays: [2027-01-18, 2027-02-15, 2027-05-31, 2027-07-05, 2027-09-06, 2027-11-25, 2027-11-26, 2027-12-24]
+preferred_window: { start: 2027-01-07, end: 2027-01-23, bonus_usd: 75 }
+group_size: 4
+passengers: 1
+currency: USD
+comfort_lambda: 40
+verify_top_n: 40
+airline_tiers: { AA: 2, UA: 2, DL: 2, AV: 2, CM: 2, NK: 3, F9: 3, VB: 3, Y4: 3 }
