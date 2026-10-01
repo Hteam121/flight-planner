@@ -33,6 +33,14 @@ class Leg:
     plane: str = ""
 
 
+def total_duration(legs: list["Leg"]) -> int:
+    """True elapsed minutes: sum of in-air leg durations plus layovers (same-airport local times)."""
+    if not legs:
+        return 0
+    layovers = sum(int((legs[i + 1].depart - legs[i].arrive).total_seconds() // 60) for i in range(len(legs) - 1))
+    return sum(l.duration_min for l in legs) + layovers
+
+
 @dataclass
 class Itinerary:
     origin: str

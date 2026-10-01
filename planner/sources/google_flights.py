@@ -13,7 +13,7 @@ from datetime import date, datetime
 from fast_flights import FlightQuery, FlightsNotFound, Passengers, create_query, get_flights
 
 from ..airlines import resolve
-from ..models import Itinerary, Leg
+from ..models import Itinerary, Leg, total_duration
 from .base import ItinerarySource
 
 
@@ -95,7 +95,7 @@ class GoogleFlightsSource(ItinerarySource):
                     airlines=list(f.airlines),
                     airline_codes=[resolve(a, name_to_code.get(a, "")) for a in f.airlines],
                     stops=len(legs) - 1,
-                    total_duration_min=int((legs[-1].arrive - legs[0].depart).total_seconds() // 60),
+                    total_duration_min=total_duration(legs),
                     depart_dt=legs[0].depart,
                     arrive_dt=legs[-1].arrive,
                     layover_airports=[ap for _, _, ap in layovers],

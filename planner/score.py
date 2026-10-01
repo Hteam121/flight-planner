@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from .airlines import resolve
 from .calendar import pto_cost
 from .config import TripConfig
-from .models import Itinerary
+from .models import Itinerary, total_duration
 
 
 def airline_penalty(it: Itinerary, cfg: TripConfig) -> float:
@@ -41,6 +41,9 @@ def annotate(its: list[Itinerary], cfg: TripConfig, lam: float | None = None) ->
     if not its:
         return its
     lam = cfg.comfort_lambda if lam is None else lam
+    for it in its:  # recompute from legs so older cached rows get the timezone-safe value
+        if it.legs:
+            it.total_duration_min = total_duration(it.legs)
     route_min = min(i.total_duration_min for i in its)
     for it in its:
         it.nights = (it.return_date - it.depart_date).days
