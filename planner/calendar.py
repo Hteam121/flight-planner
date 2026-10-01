@@ -104,3 +104,29 @@ def rank_pairs_for_verification(cfg: TripConfig, pairs: list[DatePair], top_n: i
         chosen.append(p)
         seen.add(p.key)
     return sorted(chosen, key=lambda p: (p.depart, p.ret))
+
+
+def spread_pairs(cfg: TripConfig, pairs: list[DatePair]) -> list[DatePair]:
+    """Year-scan sampling: the best pair per ISO week of departure, plus one pair per
+    departure day inside the preferred window. Surfaces cheap weeks across a long window
+    without a price-hint source; narrow the window afterwards to drill in.
+    """
+    def best(group: list[DatePair]) -> DatePair:
+        # highest nights-per-PTO, then longest, then Thu/Fri departures
+        return max(group, key=lambda p: (p.pto_efficiency, p.nights, 1 if p.depart.weekday() in (3, 4) else 0))
+
+    by_week: dict[tuple[int, int], list[DatePair]] = {}
+    for p in pairs:
+        y, w, _ = p.depart.isocalendar()
+        by_week.setdefault((y, w), []).append(p)
+    chosen = {best(g).key: best(g) for g in by_week.values()}
+
+    if cfg.preferred_window:
+        by_day: dict[date, list[DatePair]] = {}
+        for p in pairs:
+            if cfg.preferred_window.start <= p.depart <= cfg.preferred_window.end:
+                by_day.setdefault(p.depart, []).append(p)
+        for g in by_day.values():
+            b = best(g)
+            chosen[b.key] = b
+    return sorted(chosen.values(), key=lambda p: (p.depart, p.ret))

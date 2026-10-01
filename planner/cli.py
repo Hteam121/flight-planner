@@ -12,7 +12,7 @@ from rich.progress import Progress
 from rich.table import Table
 
 from .cache import Cache
-from .calendar import feasible_pairs, rank_pairs_for_verification
+from .calendar import feasible_pairs, rank_pairs_for_verification, spread_pairs
 from .config import TripConfig, load_trip
 from .models import DatePair, Itinerary
 from .report import render
@@ -40,9 +40,12 @@ def pairs(trip: Path, limit: int = 40):
     _pairs_table(feasible_pairs(cfg), limit)
 
 
-def _select_pairs(cfg: TripConfig, all_pairs: list[DatePair], top: int, verify_all: bool, hints) -> list[DatePair]:
+def _select_pairs(cfg: TripConfig, all_pairs: list[DatePair], top: int, verify_all: bool, hints, spread: bool | None) -> list[DatePair]:
     if verify_all:
         return all_pairs
+    window_days = (cfg.search_window.latest_return - cfg.search_window.earliest_depart).days
+    if spread or (spread is None and not hints and window_days > 90):
+        return spread_pairs(cfg, all_pairs)
     if hints:
         # Rank by cached price hint; unpriced pairs go after priced ones, then by heuristic.
         priced = sorted((p for p in all_pairs if p.key in hints), key=lambda p: hints[p.key][0])
@@ -62,6 +65,7 @@ def run(
     top: int = typer.Option(None, help="How many date pairs to verify on Google Flights (default: trip's verify_top_n)."),
     all_pairs: bool = typer.Option(False, "--all", help="Verify every feasible pair (slow: ~5s each)."),
     dry_run: bool = typer.Option(False, help="Only list which pairs would be fetched."),
+    spread: bool = typer.Option(None, "--spread/--no-spread", help="Sample one pair per week across the window (auto when window > 90 days and no price hints)."),
     refresh: bool = typer.Option(False, help="Ignore today's cached fetches and refetch."),
     comfort_weight: float = typer.Option(None, help="Dollars per comfort point for the Balanced profile."),
     out: Path = Path("out"),
@@ -89,7 +93,7 @@ def run(
         console.print(f"Travelpayouts hints for {len(hints)} pairs")
 
     top_n = top or cfg.verify_top_n
-    selected = _select_pairs(cfg, pairs_, top_n, all_pairs, hints)
+    selected = _select_pairs(cfg, pairs_, top_n, all_pairs, hints, spread)
     console.print(f"Will verify {len(selected)} pairs × {len(cfg.origin) * len(cfg.destination)} route(s)")
     if dry_run:
         _pairs_table(selected, limit=len(selected))
